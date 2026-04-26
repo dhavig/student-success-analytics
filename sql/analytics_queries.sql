@@ -67,7 +67,31 @@ JOIN fact_retention r USING (student_id)
 GROUP BY q.lms_quartile
 ORDER BY q.lms_quartile;
 
--- 6. Unmet financial need vs. retention
+-- 6. Course evaluation rating distribution by program
+SELECT
+    p.program_code,
+    p.program_name,
+    COUNT(*)                                         AS n_evals,
+    ROUND(AVG(e.rating), 2)                          AS avg_rating
+FROM fact_course_evaluation e
+JOIN dim_student s USING (student_id)
+JOIN dim_program p USING (program_code)
+GROUP BY p.program_code, p.program_name
+ORDER BY avg_rating DESC;
+
+-- 7. Free-text presence by demographic (signal that survey response varies)
+SELECT
+    s.first_generation,
+    s.pell_eligible,
+    COUNT(DISTINCT s.student_id)                     AS students,
+    COUNT(*)                                         AS evaluations,
+    ROUND(AVG(e.rating), 2)                          AS avg_rating
+FROM fact_course_evaluation e
+JOIN dim_student s USING (student_id)
+GROUP BY s.first_generation, s.pell_eligible
+ORDER BY s.first_generation, s.pell_eligible;
+
+-- 8. Unmet financial need vs. retention
 SELECT
     CASE
         WHEN unmet_need < 5000  THEN '0-5k'

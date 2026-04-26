@@ -24,6 +24,7 @@ DB_PATH = os.path.join(DATA_DIR, "warehouse.duckdb")
 SCHEMA_PATH = os.path.join(SQL_DIR, "schema.sql")
 
 REQUIRED_FILES = ["students.csv", "term_enrollment.csv", "retention.csv", "programs.csv"]
+OPTIONAL_FILES = ["course_evaluations.csv"]
 
 
 def _check_inputs() -> None:
@@ -81,11 +82,17 @@ def main() -> None:
     con.execute("INSERT INTO fact_term_enrollment SELECT * FROM term_fact_df;")
     con.execute("INSERT INTO fact_retention     SELECT * FROM retention_df;")
 
-    counts = {
-        t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-        for t in ["dim_student", "dim_program", "dim_term",
+    table_list = ["dim_student", "dim_program", "dim_term",
                   "fact_term_enrollment", "fact_retention"]
-    }
+
+    eval_path = os.path.join(DATA_DIR, "course_evaluations.csv")
+    if os.path.exists(eval_path):
+        evals = pd.read_csv(eval_path)
+        con.register("eval_df", evals)
+        con.execute("INSERT INTO fact_course_evaluation SELECT * FROM eval_df;")
+        table_list.append("fact_course_evaluation")
+
+    counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in table_list}
     con.close()
 
     print(f"Built warehouse at {DB_PATH}")

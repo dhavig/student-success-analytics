@@ -42,6 +42,12 @@ def load_warehouse_tables() -> dict[str, pd.DataFrame]:
         "terms":    con.execute("SELECT * FROM fact_term_enrollment").df(),
         "retention": con.execute("SELECT * FROM fact_retention").df(),
     }
+    has_evals = con.execute(
+        "SELECT count(*) FROM information_schema.tables "
+        "WHERE table_name = 'fact_course_evaluation'"
+    ).fetchone()[0]
+    if has_evals:
+        tables["evaluations"] = con.execute("SELECT * FROM fact_course_evaluation").df()
     con.close()
     return tables
 
@@ -54,12 +60,21 @@ def load_artifacts() -> dict:
     fa = os.path.join(ART_DIR, "fairness_audit.csv")
     metrics = os.path.join(ART_DIR, "metrics.json")
     shap_png = os.path.join(ART_DIR, "shap_summary.png")
+    eval_sent = os.path.join(ART_DIR, "evaluation_sentiment.csv")
+    eval_topics = os.path.join(ART_DIR, "evaluation_topics.csv")
+    sent_v_ret = os.path.join(ART_DIR, "sentiment_vs_retention.csv")
     if os.path.exists(risk):
         out["risk_scores"] = pd.read_csv(risk)
     if os.path.exists(fi):
         out["feature_importance"] = pd.read_csv(fi)
     if os.path.exists(fa):
         out["fairness_audit"] = pd.read_csv(fa)
+    if os.path.exists(eval_sent):
+        out["evaluation_sentiment"] = pd.read_csv(eval_sent)
+    if os.path.exists(eval_topics):
+        out["evaluation_topics"] = pd.read_csv(eval_topics)
+    if os.path.exists(sent_v_ret):
+        out["sentiment_vs_retention"] = pd.read_csv(sent_v_ret)
     if os.path.exists(metrics):
         with open(metrics) as fh:
             out["metrics"] = json.load(fh)
@@ -250,6 +265,76 @@ def model_transparency(artifacts: dict) -> None:
     )
 
 
+def voice_of_student(tables: dict[str, pd.DataFrame], artifacts: dict) -> None:
+    if "evaluations" not in tables:
+        st.warning(
+            "No course evaluations in the warehouse yet. Run:\n\n"
+            "```bash\n"
+            "python etl/generate_evaluations.py\n"
+            "python etl/load_warehouse.py\n"
+            "python nlp/analyze_evaluations.py\n"
+            "```"
+        )
+        return
+
+    evals = tables["evaluations"]
+    sentiment = artifacts.get("evaluation_sentiment")
+    topics = artifacts.get("evaluation_topics")
+    sent_v_ret = artifacts.get("sentiment_vs_retention")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Evaluations", f"{len(evals):,}")
+    c2.metric("Students with comments",
+              f"{evals['student_id'].nunique():,}")
+    c3.metric("Mean rating", f"{evals['rating'].mean():.2f}")
+    if sentiment is not None:
+        c4.metric("Mean sentiment",
+                  f"{sentiment['mean_sentiment'].mean():+.2f}")
+
+    st.divider()
+
+    if sent_v_ret is not None:
+        st.subheader("Sentiment band vs. year-2 retention")
+        s = sent_v_ret.copy()
+        s["retention_rate"] = s["retention_rate"].astype(float)
+        fig = px.bar(
+            s, x="sentiment_band", y="retention_rate", text=s["retention_rate"].map(lambda v: f"{v:.0%}"),
+            hover_data=["n"],
+            color="sentiment_band",
+            color_discrete_sequence=["#7A0019", "#C77018", "#E0A82E", "#FFC629"],
+        )
+        fig.update_yaxes(tickformat=".0%", range=[0, 1])
+        fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10), height=360)
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(
+            "Students writing very negative course-evaluation comments retain at "
+            "materially lower rates than peers — text signal a numeric warehouse alone misses."
+        )
+
+    if topics is not None:
+        st.divider()
+        st.subheader("Topics surfaced by LDA")
+        st.dataframe(topics, use_container_width=True, height=260)
+
+    st.divider()
+    st.subheader("Sample low-sentiment comments (deidentified)")
+    if sentiment is not None:
+        lowest_students = sentiment.nsmallest(20, "mean_sentiment")["student_id"].tolist()
+        sample = evals[evals["student_id"].isin(lowest_students)].sample(
+            min(15, len(evals)), random_state=1
+        )
+    else:
+        sample = evals.sample(min(15, len(evals)), random_state=1)
+    st.dataframe(sample[["student_id", "term_year", "term_season",
+                         "course_code", "rating", "comment"]],
+                 use_container_width=True, height=420)
+    st.caption(
+        "These comments would route to advisors and student-success staff via the "
+        "outreach workflow. Production deployment would require FERPA review and "
+        "an explicit consent / de-identification policy."
+    )
+
+
 def main() -> None:
     header()
     tables = load_warehouse_tables()
@@ -258,12 +343,16 @@ def main() -> None:
         return
     artifacts = load_artifacts()
 
-    tab1, tab2, tab3 = st.tabs(["Cohort Overview", "Advisor Outreach", "Model Transparency"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Cohort Overview", "Advisor Outreach", "Voice of Student", "Model Transparency"]
+    )
     with tab1:
         cohort_overview(tables)
     with tab2:
         advisor_outreach(tables, artifacts)
     with tab3:
+        voice_of_student(tables, artifacts)
+    with tab4:
         model_transparency(artifacts)
 
 

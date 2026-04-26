@@ -3,6 +3,7 @@
 
 DROP TABLE IF EXISTS fact_term_enrollment;
 DROP TABLE IF EXISTS fact_retention;
+DROP TABLE IF EXISTS fact_course_evaluation;
 DROP TABLE IF EXISTS dim_student;
 DROP TABLE IF EXISTS dim_program;
 DROP TABLE IF EXISTS dim_term;
@@ -63,4 +64,14 @@ CREATE TABLE fact_retention (
     cohort_year                 INTEGER NOT NULL,
     retention_probability_true  DOUBLE,
     returned_year_2             INTEGER NOT NULL
+);
+
+-- Free-text course evaluations -- the "survey + unstructured text" layer.
+CREATE TABLE fact_course_evaluation (
+    student_id          VARCHAR NOT NULL,
+    term_year           INTEGER NOT NULL,
+    term_season         VARCHAR NOT NULL,
+    course_code         VARCHAR NOT NULL,
+    rating              INTEGER NOT NULL,
+    comment             VARCHAR NOT NULL
 );
