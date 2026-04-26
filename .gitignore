@@ -20,6 +20,7 @@ artifacts/*.pkl
 artifacts/*.joblib
 artifacts/*.png
 artifacts/*.json
+artifacts/*.csv
 
 # Keep folder structure
 !data/.gitkeep
