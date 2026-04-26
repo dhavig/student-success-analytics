@@ -1,5 +1,7 @@
 # Student Success Analytics
 
+[![CI](https://github.com/dhavig/student-success-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/dhavig/student-success-analytics/actions/workflows/ci.yml)
+
 End-to-end institutional research analytics platform: synthetic student data → warehouse → predictive retention model → interactive dashboard.
 
 Built as a portfolio project aligned to the Senior Data Scientist role at Loyola University Chicago's Office of Institutional Research & Analysis.
@@ -29,9 +31,13 @@ student-success-analytics/
 │   └── train_retention.py     # XGBoost model + SHAP + fairness audit
 ├── dashboard/
 │   └── app.py                 # Streamlit dashboard
+├── scripts/
+│   └── render_screenshots.py  # Render README gallery PNGs
+├── tests/                     # pytest suite (ETL, model, dashboard)
+├── .github/workflows/ci.yml   # CI: tests + end-to-end pipeline run
 ├── data/                      # Generated CSVs and DuckDB file (gitignored)
 ├── artifacts/                 # Trained model, plots, metrics (gitignored)
-├── notebooks/                 # Optional exploratory notebooks
+├── docs/                      # README screenshots
 ├── MODEL_CARD.md
 ├── requirements.txt
 └── README.md
@@ -86,6 +92,23 @@ streamlit run dashboard/app.py
 **Fairness audit.** Per-group ROC-AUC, false negative rate, and false positive rate across protected attributes — the starting point for any responsible deployment review.
 
 ![Fairness audit](docs/05_fairness_audit.png)
+
+## Testing & CI
+
+24 pytest tests cover the data generator, warehouse loader, model pipeline, and dashboard module:
+
+```bash
+pytest -q
+```
+
+GitHub Actions runs the same suite plus the full end-to-end pipeline (generate → load → train → render screenshots) on every push. See `.github/workflows/ci.yml`.
+
+Notable invariants the tests enforce:
+
+- Protected attributes (gender, race, first-generation, Pell) are never used as model features — only for the fairness audit.
+- The warehouse contains no PII columns (`first_name`, `last_name`).
+- Referential integrity holds across all fact-to-dim joins.
+- The trained model beats a majority-class baseline.
 
 ## Responsible use
 

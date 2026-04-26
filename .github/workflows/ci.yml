@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests and end-to-end pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest -q
+
+      - name: End-to-end pipeline (generate -> warehouse -> train)
+        run: |
+          python etl/generate_data.py
+          python etl/load_warehouse.py
+          python models/train_retention.py
+
+      - name: Verify model artifacts were produced
+        run: |
+          test -f artifacts/retention_model.joblib
+          test -f artifacts/risk_scores.csv
+          test -f artifacts/fairness_audit.csv
+          test -f artifacts/feature_importance.csv
+          test -f artifacts/metrics.json
+          test -f artifacts/shap_summary.png
+
+      - name: Render README screenshots
+        run: python scripts/render_screenshots.py
+
+      - name: Upload artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-artifacts
+          path: |
+            artifacts/
+            data/
+          retention-days: 7
