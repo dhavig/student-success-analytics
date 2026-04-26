@@ -117,3 +117,4 @@ All data here is synthetic. The fairness audit in `models/train_retention.py` is
 ## License
 
 MIT — for portfolio and educational use.
+
