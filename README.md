@@ -4,6 +4,8 @@ End-to-end institutional research analytics platform: synthetic student data →
 
 Built as a portfolio project aligned to the Senior Data Scientist role at Loyola University Chicago's Office of Institutional Research & Analysis.
 
+![Cohort overview](docs/01_cohort_overview.png)
+
 ## What's inside
 
 | Layer | Tech | Purpose |
@@ -66,6 +68,24 @@ streamlit run dashboard/app.py
 5. Surface results in a dashboard with three views: leadership summary, advisor outreach list, and model transparency.
 
 **Why this matters for Loyola IR.** This mirrors a real-world OIRA workflow — translating warehoused student data into both strategic insight (cohort dashboards) and operational impact (risk-flagged students for advisor outreach), with the responsible-AI guardrails the role explicitly calls out.
+
+## Gallery
+
+**Predictive lift.** The four-tier risk band cleanly separates retained from non-retained students; the High band has a 4% second-year retention rate vs. 96% in the Low band — that's the operational signal advisors need.
+
+![Risk distribution and predictive lift](docs/03_risk_distribution.png)
+
+**Top retention drivers.** First-term GPA dominates, followed by financial pressure (`unmet_need`), residential context (`distance_from_home_mi`), and institutional aid. Advising touch and LMS engagement also rank meaningfully.
+
+![Top features](docs/04_feature_importance.png)
+
+**Equity gaps.** A five-point first-generation gap (82% vs. 77%) is the kind of finding an IR analyst would surface for the provost's office.
+
+![Retention gaps](docs/02_retention_gaps.png)
+
+**Fairness audit.** Per-group ROC-AUC, false negative rate, and false positive rate across protected attributes — the starting point for any responsible deployment review.
+
+![Fairness audit](docs/05_fairness_audit.png)
 
 ## Responsible use
 
