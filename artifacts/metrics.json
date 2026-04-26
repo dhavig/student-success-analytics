@@ -1,0 +1,12 @@
+{
+  "roc_auc": 0.6884687843531493,
+  "pr_auc": 0.8858353790846203,
+  "brier": 0.14489462096310263,
+  "accuracy_at_0.5": 0.8072,
+  "true_positive": 1003,
+  "false_positive": 237,
+  "true_negative": 6,
+  "false_negative": 4,
+  "n": 1250,
+  "positive_rate": 0.8056
+}
