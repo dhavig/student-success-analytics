@@ -92,7 +92,10 @@ def cohort_overview(tables: dict[str, pd.DataFrame]) -> None:
     students = tables["students"]
     retention = tables["retention"]
     programs = tables["programs"]
-    joined = retention.merge(students, on="student_id").merge(programs, on="program_code")
+    # Drop duplicate cohort_year on the retention side; students has the same value.
+    joined = (retention.drop(columns=["cohort_year"])
+                       .merge(students, on="student_id")
+                       .merge(programs, on="program_code"))
 
     cohorts = sorted(joined["cohort_year"].unique())
     selected = st.multiselect("Cohort years", cohorts, default=cohorts)
