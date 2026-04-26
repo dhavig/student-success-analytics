@@ -30,13 +30,15 @@ jobs:
       - name: Run unit tests
         run: pytest -q
 
-      - name: End-to-end pipeline (generate -> warehouse -> train)
+      - name: End-to-end pipeline (generate -> warehouse -> train -> NLP)
         run: |
           python etl/generate_data.py
+          python etl/generate_evaluations.py
           python etl/load_warehouse.py
           python models/train_retention.py
+          python nlp/analyze_evaluations.py
 
-      - name: Verify model artifacts were produced
+      - name: Verify model + NLP artifacts were produced
         run: |
           test -f artifacts/retention_model.joblib
           test -f artifacts/risk_scores.csv
@@ -44,9 +46,18 @@ jobs:
           test -f artifacts/feature_importance.csv
           test -f artifacts/metrics.json
           test -f artifacts/shap_summary.png
+          test -f artifacts/evaluation_sentiment.csv
+          test -f artifacts/evaluation_topics.csv
+          test -f artifacts/sentiment_vs_retention.csv
 
       - name: Render README screenshots
         run: python scripts/render_screenshots.py
+
+      - name: Build IR memo notebook
+        run: python scripts/build_notebook.py
+
+      - name: Build Tableau export CSVs
+        run: python scripts/export_for_tableau.py
 
       - name: Upload artifacts on failure
         if: failure()

@@ -12,9 +12,11 @@ Built as a portfolio project aligned to the Senior Data Scientist role at Loyola
 
 | Layer | Tech | Purpose |
 |---|---|---|
-| **Data engineering** | Python, DuckDB, SQL | Generates synthetic student records and loads them into a star-schema warehouse. |
+| **Data engineering** | Python, DuckDB, SQL | Generates synthetic student records, course evaluations, and loads them into a star-schema warehouse. |
 | **Advanced analytics** | scikit-learn, XGBoost, SHAP | First-year retention risk model with explainability and a fairness audit across demographic slices. |
-| **Business intelligence** | Streamlit, Plotly | Interactive dashboard: cohort retention trends, risk score distribution, advisor outreach list. |
+| **Survey + unstructured text** | VADER, scikit-learn LDA | Sentiment + topic modeling on synthetic course-evaluation comments; cross-linked to retention outcome. |
+| **Business intelligence** | Streamlit, Plotly, Tableau Public | Interactive 4-tab Streamlit dashboard, plus a Tableau Public companion (see `docs/TABLEAU_GUIDE.md`). |
+| **Teaching artifact** | Jupyter | `notebooks/01_ir_memo_walkthrough.ipynb` — the analytic pattern written as an IR memo for analyst cross-training. |
 | **Documentation** | Markdown | README case study + Model Card describing assumptions, metrics, and responsible-use guidance. |
 
 ## Project structure
@@ -22,22 +24,29 @@ Built as a portfolio project aligned to the Senior Data Scientist role at Loyola
 ```
 student-success-analytics/
 ├── etl/
-│   ├── generate_data.py       # Synthetic student/enrollment/aid generator
-│   └── load_warehouse.py      # Builds DuckDB star schema and loads data
+│   ├── generate_data.py            # Synthetic student/enrollment/aid generator
+│   ├── generate_evaluations.py     # Synthetic course-eval comments + ratings
+│   └── load_warehouse.py           # Builds DuckDB star schema and loads data
 ├── sql/
-│   ├── schema.sql             # Star schema DDL (fact + dim tables)
-│   └── analytics_queries.sql  # Example IR-style analytic queries
+│   ├── schema.sql                  # Star schema DDL (fact + dim tables)
+│   └── analytics_queries.sql       # 8 reference IR-style analytic queries
 ├── models/
-│   └── train_retention.py     # XGBoost model + SHAP + fairness audit
+│   └── train_retention.py          # XGBoost model + SHAP + fairness audit
+├── nlp/
+│   └── analyze_evaluations.py      # VADER sentiment + LDA topics on comments
 ├── dashboard/
-│   └── app.py                 # Streamlit dashboard
+│   └── app.py                      # Streamlit dashboard (4 tabs)
+├── notebooks/
+│   └── 01_ir_memo_walkthrough.ipynb  # IR-memo-style teaching notebook
 ├── scripts/
-│   └── render_screenshots.py  # Render README gallery PNGs
-├── tests/                     # pytest suite (ETL, model, dashboard)
-├── .github/workflows/ci.yml   # CI: tests + end-to-end pipeline run
-├── data/                      # Generated CSVs and DuckDB file (gitignored)
-├── artifacts/                 # Trained model, plots, metrics (gitignored)
-├── docs/                      # README screenshots
+│   ├── render_screenshots.py       # Render README gallery PNGs
+│   ├── export_for_tableau.py       # Denormalized CSV for Tableau Public
+│   └── build_notebook.py           # Programmatic notebook builder
+├── tests/                          # pytest suite (ETL, model, NLP, dashboard)
+├── .github/workflows/ci.yml        # CI: tests + end-to-end pipeline run
+├── data/                           # Generated CSVs and DuckDB file (gitignored)
+├── artifacts/                      # Trained model, plots, metrics (gitignored)
+├── docs/                           # README screenshots + TABLEAU_GUIDE.md
 ├── MODEL_CARD.md
 ├── requirements.txt
 └── README.md
@@ -53,13 +62,18 @@ pip install -r requirements.txt
 
 # 2. Generate synthetic data and build the warehouse
 python etl/generate_data.py
+python etl/generate_evaluations.py     # synthetic course-eval comments
 python etl/load_warehouse.py
 
-# 3. Train the retention model
+# 3. Train the retention model and run the NLP layer
 python models/train_retention.py
+python nlp/analyze_evaluations.py
 
-# 4. Launch the dashboard
+# 4. Launch the dashboard (4 tabs)
 streamlit run dashboard/app.py
+
+# 5. Optional: export for Tableau Public companion (see docs/TABLEAU_GUIDE.md)
+python scripts/export_for_tableau.py
 ```
 
 ## Case study: First-year retention risk
@@ -92,6 +106,15 @@ streamlit run dashboard/app.py
 **Fairness audit.** Per-group ROC-AUC, false negative rate, and false positive rate across protected attributes — the starting point for any responsible deployment review.
 
 ![Fairness audit](docs/05_fairness_audit.png)
+
+**Voice of student.** Synthetic course-evaluation comments scored with VADER sentiment and clustered into 6 topics via LDA. Students writing very-negative comments retain at ~55% vs. ~90% for positive-sentiment peers — a text signal a numeric warehouse alone misses.
+
+| Sentiment band | Students | Year-2 retention |
+|---|---:|---:|
+| Very Negative | ~170 | 55% |
+| Slightly Negative | ~940 | 65% |
+| Slightly Positive | ~1,400 | 78% |
+| Positive | ~2,500 | 90% |
 
 ## Testing & CI
 
