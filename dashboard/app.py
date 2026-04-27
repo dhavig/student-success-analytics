@@ -215,7 +215,7 @@ def advisor_outreach(tables: dict[str, pd.DataFrame], artifacts: dict) -> None:
 
     st.download_button(
         "Download outreach list (CSV)",
-        view[cols].to_csv(index=False).encode("utf-8"),
+        view[cols].to_csv(index=False).encode("utf-8-sig"),
         file_name="advisor_outreach.csv",
         mime="text/csv",
     )
