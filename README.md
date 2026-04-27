@@ -85,7 +85,7 @@ python scripts/export_for_tableau.py
 2. Load into a DuckDB star schema (`fact_term_enrollment`, `dim_student`, `dim_program`, `dim_term`).
 3. Train a gradient-boosted classifier predicting `returned_year_2`. Evaluate with ROC-AUC, PR-AUC, and calibration.
 4. Explain individual predictions with SHAP. Audit subgroup performance (gender, first-generation status, Pell eligibility, race/ethnicity) for parity.
-5. Surface results in a dashboard with three views: leadership summary, advisor outreach list, and model transparency.
+5. Surface results in a dashboard with four views: leadership summary, advisor outreach list, voice of student (NLP), and model transparency.
 
 **Why this matters for Loyola IR.** This mirrors a real-world OIRA workflow — translating warehoused student data into both strategic insight (cohort dashboards) and operational impact (risk-flagged students for advisor outreach), with the responsible-AI guardrails the role explicitly calls out.
 
@@ -118,7 +118,7 @@ python scripts/export_for_tableau.py
 
 ## Testing & CI
 
-24 pytest tests cover the data generator, warehouse loader, model pipeline, and dashboard module:
+30 pytest tests cover the data generator, warehouse loader, retention model, NLP pipeline, and dashboard module:
 
 ```bash
 pytest -q
